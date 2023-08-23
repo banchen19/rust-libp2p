@@ -66,9 +66,9 @@ impl Push<OutboundPush> {
 /// Information of a peer sent in protocol messages.
 #[derive(Debug, Clone)]
 pub struct Info {
-    /// The public key of the local peer.
+    /// 本地对等方的公钥。
     pub public_key: PublicKey,
-    /// Application-specific version of the protocol family used by the peer,
+    /// 对等方使用的协议系列的特定应用程序版本，
     /// e.g. `ipfs/1.0.0` or `polkadot/1.0.0`.
     pub protocol_version: String,
     /// Name and version of the peer, similar to the `User-Agent` header in

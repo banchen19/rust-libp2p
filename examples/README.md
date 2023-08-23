@@ -7,8 +7,9 @@ A set of examples showcasing how to use rust-libp2p.
 
 ## Individual libp2p features
 
-- [Chat](./chat-example) A basic chat application demonstrating libp2p and the mDNS and Gossipsub protocols.
-- [Distributed key-value store](./distributed-key-value-store) A basic key value store demonstrating libp2p and the mDNS and Kademlia protocol.
+- [Chat](./chat-example)基本聊天应用程序，演示了 libp2p、mDNS 和 Gossipsub 协议。
+
+- [Distributed key-value store](./distributed-key-value-store) 基本键值存储示例，演示了 libp2p、mDNS 和 Kademlia 协议。
 
 - [File sharing application](./file-sharing) Basic file sharing application with peers either providing or locating and getting files by name.
 

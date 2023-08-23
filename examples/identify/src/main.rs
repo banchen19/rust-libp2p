@@ -1,22 +1,17 @@
-// Copyright 2018 Parity Technologies (UK) Ltd.
+// 版权 2018 Parity Technologies (英国) 有限公司
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
+// 特此免费授予获得本软件及其关联文档文件（以下简称“软件”）副本的任何人
+// 以无限制地处理本软件，包括但不限于使用、复制、修改、合并、发布、分发、再授权，
+// 以及销售软件的副本，只需遵守以下条件：
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// 上述版权声明和本许可声明应包含在
+// 所有副本或主要部分中。
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
+// 本“软件”按“原样”提供，不附带任何明示或暗示的保证，
+// 包括但不限于适销性、特定用途适用性和非侵权性保证。在任何情况下，
+// 作者或版权持有人均不对任何索赔、损害或其他责任承担责任，
+// 无论是在合同诉讼、侵权行为还是其他情况下产生的，
+// 从而导致软件或使用或其他交易中的其他交易产生的责任。
 
 #![doc = include_str!("../README.md")]
 
@@ -33,7 +28,7 @@ use std::error::Error;
 async fn main() -> Result<(), Box<dyn Error>> {
     let local_key = identity::Keypair::generate_ed25519();
     let local_peer_id = PeerId::from(local_key.public());
-    println!("Local peer id: {local_peer_id:?}");
+    println!("本地对等 ID: {local_peer_id:?}");
 
     let transport = tcp::async_io::Transport::default()
         .upgrade(Version::V1Lazy)
@@ -41,7 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .multiplex(yamux::Config::default())
         .boxed();
 
-    // Create a identify network behaviour.
+    // 创建一个身份网络行为。
     let behaviour = identify::Behaviour::new(identify::Config::new(
         "/ipfs/id/1.0.0".to_string(),
         local_key.public(),
@@ -50,29 +45,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut swarm =
         SwarmBuilder::with_async_std_executor(transport, behaviour, local_peer_id).build();
 
-    // Tell the swarm to listen on all interfaces and a random, OS-assigned
-    // port.
+    // 告诉 Swarm 在所有接口上监听和随机的、由操作系统分配的端口。
     swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
-    // Dial the peer identified by the multi-address given as the second
-    // command-line argument, if any.
+    // 如果有，拨号给定的多地址表示的节点。
     if let Some(addr) = std::env::args().nth(1) {
         let remote: Multiaddr = addr.parse()?;
         swarm.dial(remote)?;
-        println!("Dialed {addr}")
+        println!("拨号 {addr}")
     }
 
     loop {
         match swarm.select_next_some().await {
-            SwarmEvent::NewListenAddr { address, .. } => println!("Listening on {address:?}"),
-            // Prints peer id identify info is being sent to.
+            SwarmEvent::NewListenAddr { address, .. } => println!("监听中 {address:?}"),
+            // 打印身份信息正在发送到的对等 ID。
             SwarmEvent::Behaviour(identify::Event::Sent { peer_id, .. }) => {
-                println!("Sent identify info to {peer_id:?}")
+                println!("发送身份信息给 {peer_id:#?}")
             }
-            // Prints out the info received via the identify event
+            // 打印通过身份事件接收到的信息。
             SwarmEvent::Behaviour(identify::Event::Received { info, .. }) => {
-                println!("Received {info:?}")
+                println!("接收到 {info:?}");
+                let info_addr=info.listen_addrs;
+                println!("接收到 {info_addr:#?}")
             }
+
             _ => {}
         }
     }

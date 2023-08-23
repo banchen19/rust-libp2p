@@ -23,18 +23,18 @@ use serde::{Deserialize, Serialize};
 use std::collections::{hash_map, HashMap, HashSet};
 use std::error::Error;
 
-/// Creates the network components, namely:
-///
-/// - The network client to interact with the network layer from anywhere
-///   within your application.
-///
-/// - The network event stream, e.g. for incoming requests.
-///
-/// - The network task driving the network itself.
+// 创建网络组件，即：
+// ///
+// - 从任何地方与网络层交互的网络客户端
+// 在您的应用程序中。
+// ///
+// - 网络事件流，例如传入请求。
+// ///
+// - 驱动网络本身的网络任务。
 pub(crate) async fn new(
     secret_key_seed: Option<u8>,
 ) -> Result<(Client, impl Stream<Item = Event>, EventLoop), Box<dyn Error>> {
-    // Create a public/private key pair, either random or based on a seed.
+    // 根据种子创建公钥/私钥对，可以是随机的或者基于种子
     let id_keys = match secret_key_seed {
         Some(seed) => {
             let mut bytes = [0u8; 32];
@@ -51,8 +51,9 @@ pub(crate) async fn new(
         .multiplex(yamux::Config::default())
         .boxed();
 
-    // Build the Swarm, connecting the lower layer transport logic with the
-    // higher layer network behaviour logic.
+
+    // 构建群，将下层传输逻辑与
+    //     更高层的网络行为逻辑。
     let mut swarm = SwarmBuilder::with_async_std_executor(
         transport,
         ComposedBehaviour {

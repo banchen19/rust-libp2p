@@ -1,22 +1,17 @@
-// Copyright 2021 Protocol Labs.
+// 版权 2021 Protocol Labs。
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
+// 特此免费授予任何获得本软件及其相关文档文件（以下称为“软件”）副本的人，
+// 无偿使用软件，无论限制与否，包括但不限于使用、复制、修改、合并、出版、分发、
+// 授予再许可以及/或出售软件的副本，以及允许接收软件的人这样做，
+// 前提是遵守以下条件：
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// 上述版权声明和本许可声明应包含在所有副本或实质部分中。
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
+// 本软件按“原样”提供，无任何形式的明示或暗示保证，
+// 包括但不限于对适销性、适用性的暗示保证和不侵权的保证。
+// 在任何情况下，作者或版权持有人均不对任何索赔、损害或其他责任负责，
+// 无论是在合同诉讼、侵权行为还是其他情况下产生的，
+// 与软件或本软件的使用或其他处理有关，或者与软件或本软件的使用或其他处理有关。
 
 #![doc = include_str!("../README.md")]
 
@@ -41,43 +36,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (mut network_client, mut network_events, network_event_loop) =
         network::new(opt.secret_key_seed).await?;
 
-    // Spawn the network task for it to run in the background.
+    // 后台运行网络任务。
     spawn(network_event_loop.run());
 
-    // In case a listen address was provided use it, otherwise listen on any
-    // address.
+    // 如果提供了监听地址，请使用它，否则监听任何地址。
     match opt.listen_address {
         Some(addr) => network_client
             .start_listening(addr)
             .await
-            .expect("Listening not to fail."),
+            .expect("监听不应失败。"),
         None => network_client
             .start_listening("/ip4/0.0.0.0/tcp/0".parse()?)
             .await
-            .expect("Listening not to fail."),
+            .expect("监听不应失败。"),
     };
 
-    // In case the user provided an address of a peer on the CLI, dial it.
+    // 如果用户在命令行提供了对等方地址，请连接它。
     if let Some(addr) = opt.peer {
         let peer_id = match addr.iter().last() {
             Some(Protocol::P2p(peer_id)) => peer_id,
-            _ => return Err("Expect peer multiaddr to contain peer ID.".into()),
+            _ => return Err("预期对等多地址包含对等方 ID。".into()),
         };
         network_client
             .dial(peer_id, addr)
             .await
-            .expect("Dial to succeed");
+            .expect("拨号应成功");
     }
 
     match opt.argument {
-        // Providing a file.
+        // 提供文件。
         CliArgument::Provide { path, name } => {
-            // Advertise oneself as a provider of the file on the DHT.
+            // 在 DHT 上广告自己作为文件提供者。
             network_client.start_providing(name.clone()).await;
 
             loop {
                 match network_events.next().await {
-                    // Reply with the content of the file on incoming requests.
+                    // 在传入请求时回复文件内容。
                     Some(network::Event::InboundRequest { request, channel }) => {
                         if request == name {
                             network_client
@@ -89,25 +83,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
-        // Locating and getting a file.
+        // 定位并获取文件。
         CliArgument::Get { name } => {
-            // Locate all nodes providing the file.
+            // 定位提供文件的所有节点。
             let providers = network_client.get_providers(name.clone()).await;
             if providers.is_empty() {
-                return Err(format!("Could not find provider for file {name}.").into());
+                return Err(format!("无法找到文件 {name} 的提供者。").into());
             }
 
-            // Request the content of the file from each node.
+            // 从每个节点请求文件内容。
             let requests = providers.into_iter().map(|p| {
                 let mut network_client = network_client.clone();
                 let name = name.clone();
                 async move { network_client.request_file(p, name).await }.boxed()
             });
 
-            // Await the requests, ignore the remaining once a single one succeeds.
+            // 等待请求，一旦其中一个成功，忽略其余请求。
             let file_content = futures::future::select_ok(requests)
                 .await
-                .map_err(|_| "None of the providers returned file.")?
+                .map_err(|_| "没有提供者返回文件。")?
                 .0;
 
             std::io::stdout().write_all(&file_content)?;
@@ -118,9 +112,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = "libp2p file sharing example")]
+#[clap(name = "libp2p 文件共享示例")]
 struct Opt {
-    /// Fixed value to generate deterministic peer ID.
+    /// 生成确定性对等 ID 的固定值。
     #[clap(long)]
     secret_key_seed: Option<u8>,
 

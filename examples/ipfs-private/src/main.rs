@@ -1,22 +1,11 @@
-// Copyright 2020 Parity Technologies (UK) Ltd.
+// 版权 2020 Parity Technologies (UK) Ltd.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
+// 根据本软件及其相关文档文件 ("软件")，授予任何获得该软件副本的人免费使用权，以便在不受限制的情况下处理该软件，包括但不限于使用、复制、修改、合并、发布、分发、再许可和/或销售该软件的副本，并允许接收该软件的人根据以下条件进行操作：
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// 上述版权声明和本许可声明应包含在所有副本或重要部分的软件中。
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
+// 本软件"按原样"提供，无论是明示、暗示，包括但不限于商业使用、适销性、特定用途适用性和非侵权性的任何形式的担保，均不提供担保。
+// 作者或版权持有人在任何情况下都无权对任何索赔、损害或其他责任进行赔偿，无论是在合同、侵权还是其他方面，起源于、由于或与本软件或其使用或其他操作有关。
 
 #![doc = include_str!("../README.md")]
 
@@ -34,7 +23,7 @@ use libp2p::{
 };
 use std::{env, error::Error, fs, path::Path, str::FromStr, time::Duration};
 
-/// Builds the transport that serves as a common ground for all connections.
+/// 构建作为所有连接的共同基础的传输。
 pub fn build_transport(
     key_pair: identity::Keypair,
     psk: Option<PreSharedKey>,
@@ -43,12 +32,14 @@ pub fn build_transport(
     let yamux_config = yamux::Config::default();
 
     let base_transport = tcp::async_io::Transport::new(tcp::Config::default().nodelay(true));
+    
     let maybe_encrypted = match psk {
         Some(psk) => Either::Left(
             base_transport.and_then(move |socket, _| PnetConfig::new(psk).handshake(socket)),
         ),
         None => Either::Right(base_transport),
     };
+
     maybe_encrypted
         .upgrade(Version::V1Lazy)
         .authenticate(noise_config)
@@ -57,20 +48,19 @@ pub fn build_transport(
         .boxed()
 }
 
-/// Get the current ipfs repo path, either from the IPFS_PATH environment variable or
-/// from the default $HOME/.ipfs
+/// 获取当前的 IPFS 存储库路径，可以从 IPFS_PATH 环境变量或默认的 $HOME/.ipfs 中获取。
 fn get_ipfs_path() -> Box<Path> {
     env::var("IPFS_PATH")
         .map(|ipfs_path| Path::new(&ipfs_path).into())
         .unwrap_or_else(|_| {
             env::var("HOME")
                 .map(|home| Path::new(&home).join(".ipfs"))
-                .expect("could not determine home directory")
+                .expect("无法确定家目录")
                 .into()
         })
 }
 
-/// Read the pre shared key file from the given ipfs directory
+/// 从给定的 IPFS 目录中读取预共享密钥文件。
 fn get_psk(path: &Path) -> std::io::Result<Option<String>> {
     let swarm_key_file = path.join("swarm.key");
     match fs::read_to_string(swarm_key_file) {
@@ -80,23 +70,25 @@ fn get_psk(path: &Path) -> std::io::Result<Option<String>> {
     }
 }
 
-/// for a multiaddr that ends with a peer id, this strips this suffix. Rust-libp2p
-/// only supports dialing to an address without providing the peer id.
+/// 对于以对等节点 ID 结尾的多地址，此函数会将其后缀去除。
+/// Rust-libp2p 仅支持拨号到不包含对等节点 ID 的地址。
 fn strip_peer_id(addr: &mut Multiaddr) {
     let last = addr.pop();
     match last {
         Some(Protocol::P2p(peer_id)) => {
             let mut addr = Multiaddr::empty();
             addr.push(Protocol::P2p(peer_id));
-            println!("removing peer id {addr} so this address can be dialed by rust-libp2p");
+            println!(
+                "移除对等节点 ID {addr} 以便 rust-libp2p 可以拨号",
+                addr = addr
+            );
         }
         Some(other) => addr.push(other),
         _ => {}
     }
 }
 
-/// parse a legacy multiaddr (replace ipfs with p2p), and strip the peer id
-/// so it can be dialed by rust-libp2p
+/// 解析传统的多地址（将 "ipfs" 替换为 "p2p"），并去除对等节点 ID，以便 rust-libp2p 可以拨号。
 fn parse_legacy_multiaddr(text: &str) -> Result<Multiaddr, Box<dyn Error>> {
     let sanitized = text
         .split('/')
@@ -113,26 +105,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let ipfs_path = get_ipfs_path();
-    println!("using IPFS_PATH {ipfs_path:?}");
+    println!("使用 IPFS_PATH {ipfs_path:?}");
     let psk: Option<PreSharedKey> = get_psk(&ipfs_path)?
         .map(|text| PreSharedKey::from_str(&text))
         .transpose()?;
 
-    // Create a random PeerId
+    // 创建一个随机的 PeerId
     let local_key = identity::Keypair::generate_ed25519();
     let local_peer_id = PeerId::from(local_key.public());
-    println!("using random peer id: {local_peer_id:?}");
+    println!("使用随机生成的对等节点 ID: {local_peer_id:?}");
     if let Some(psk) = psk {
-        println!("using swarm key with fingerprint: {}", psk.fingerprint());
+        println!("使用具有指纹的 swarm 密钥: {}", psk.fingerprint());
     }
 
-    // Set up a an encrypted DNS-enabled TCP Transport over and Yamux protocol
+    // 设置一个经过加密的、启用了 DNS 的 TCP 传输和 Yamux 协议
     let transport = build_transport(local_key.clone(), psk);
 
-    // Create a Gosspipsub topic
+    // 创建一个 Gossipsub 主题
     let gossipsub_topic = gossipsub::IdentTopic::new("chat");
 
-    // We create a custom network behaviour that combines gossipsub, ping and identify.
+    // 我们创建一个自定义的网络行为，将 gossipsub、ping 和 identify 结合在一起。
     #[derive(NetworkBehaviour)]
     #[behaviour(to_swarm = "MyBehaviourEvent")]
     struct MyBehaviour {
@@ -165,18 +157,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    // Create a Swarm to manage peers and events
+    // 创建一个 Swarm 来管理对等节点和事件
     let mut swarm = {
         let gossipsub_config = gossipsub::ConfigBuilder::default()
             .max_transmit_size(262144)
             .build()
-            .expect("valid config");
+            .expect("有效的配置");
         let mut behaviour = MyBehaviour {
             gossipsub: gossipsub::Behaviour::new(
                 gossipsub::MessageAuthenticity::Signed(local_key.clone()),
                 gossipsub_config,
             )
-            .expect("Valid configuration"),
+            .expect("有效的配置"),
             identify: identify::Behaviour::new(identify::Config::new(
                 "/ipfs/0.1.0".into(),
                 local_key.public(),
@@ -184,43 +176,43 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ping: ping::Behaviour::new(ping::Config::new()),
         };
 
-        println!("Subscribing to {gossipsub_topic:?}");
+        println!("订阅 {gossipsub_topic:?}");
         behaviour.gossipsub.subscribe(&gossipsub_topic).unwrap();
         SwarmBuilder::with_async_std_executor(transport, behaviour, local_peer_id).build()
     };
 
-    // Reach out to other nodes if specified
+    // 如果指定了其他节点，则建立联系
     for to_dial in std::env::args().skip(1) {
         let addr: Multiaddr = parse_legacy_multiaddr(&to_dial)?;
         swarm.dial(addr)?;
-        println!("Dialed {to_dial:?}")
+        println!("拨号给 {to_dial:?}")
     }
 
-    // Read full lines from stdin
+    // 从标准输入中读取完整行
     let mut stdin = io::BufReader::new(io::stdin()).lines().fuse();
 
-    // Listen on all interfaces and whatever port the OS assigns
+    // 在所有接口上侦听和操作系统分配的任何端口
     swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
-    // Kick it off
+    // 启动
     loop {
         select! {
             line = stdin.select_next_some() => {
                 if let Err(e) = swarm
                     .behaviour_mut()
                     .gossipsub
-                    .publish(gossipsub_topic.clone(), line.expect("Stdin not to close").as_bytes())
+                    .publish(gossipsub_topic.clone(), line.expect("预期标准输入不会关闭").as_bytes())
                 {
-                    println!("Publish error: {e:?}");
+                    println!("发布错误: {e:?}");
                 }
             },
             event = swarm.select_next_some() => {
                 match event {
                     SwarmEvent::NewListenAddr { address, .. } => {
-                        println!("Listening on {address:?}");
+                        println!("正在监听 {address:?}");
                     }
                     SwarmEvent::Behaviour(MyBehaviourEvent::Identify(event)) => {
-                        println!("identify: {event:?}");
+                        println!("识别: {event:#?}");
                     }
                     SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(gossipsub::Event::Message {
                         propagation_source: peer_id,
@@ -228,7 +220,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         message,
                     })) => {
                         println!(
-                            "Got message: {} with id: {} from peer: {:?}",
+                            "收到消息: {}，ID: {}，来自对等节点: {:?}",
                             String::from_utf8_lossy(&message.data),
                             id,
                             peer_id
@@ -242,7 +234,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 ..
                             } => {
                                 println!(
-                                    "ping: rtt to {} is {} ms",
+                                    "ping: 到 {} 的往返时间是 {} 毫秒",
                                     peer.to_base58(),
                                     rtt.as_millis()
                                 );
@@ -252,14 +244,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                 result: Result::Err(ping::Failure::Timeout),
                                 ..
                             } => {
-                                println!("ping: timeout to {}", peer.to_base58());
+                                println!("ping: 到 {} 的超时", peer.to_base58());
                             }
                             ping::Event {
                                 peer,
                                 result: Result::Err(ping::Failure::Unsupported),
                                 ..
                             } => {
-                                println!("ping: {} does not support ping protocol", peer.to_base58());
+                                println!("ping: {} 不支持 ping 协议", peer.to_base58());
                             }
                             ping::Event {
                                 peer,

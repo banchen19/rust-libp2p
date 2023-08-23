@@ -1,22 +1,16 @@
-// Copyright 2018 Parity Technologies (UK) Ltd.
+// 版权所有 2018 Parity Technologies (UK) Ltd.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
+// 特此授予任何获得此软件及相关文档文件（以下称为“软件”）的副本的人，可以免费使用此软件，
+// 在不受限制的情况下处理此软件，包括但不限于使用、复制、修改、合并、发布、分发、再许可
+// 以及/或出售此软件的副本，并允许获得此软件的人这样做，但需符合以下条件：
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// 上述版权声明和本许可声明应包含在所有副本或重要部分的软件中。
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
+// 本软件按“原样”提供，无任何明示或暗示的保证，
+// 包括但不限于适销性、特定用途适用性以及非侵权的保证。在任何情况下，
+// 作者或版权持有人均不对任何索赔、损害或其他责任负责，
+// 无论是因合同行为、侵权行为还是其他原因导致、与之相关或与之有关的损害或责任，
+// 无论是在合同、侵权或其他情况下，即使提前被告知有可能发生此类损害。
 
 #![doc = include_str!("../README.md")]
 
@@ -41,24 +35,23 @@ const BOOTNODES: [&str; 4] = [
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
-    // Create a random key for ourselves.
+    // 为自己创建一个随机密钥。
     let local_key = identity::Keypair::generate_ed25519();
     let local_peer_id = PeerId::from(local_key.public());
 
-    // Set up a an encrypted DNS-enabled TCP Transport over the yamux protocol
+    // 设置一个带有 yamux 协议的加密的 DNS 启用的 TCP 传输。
     let transport = development_transport(local_key).await?;
 
-    // Create a swarm to manage peers and events.
+    // 创建一个 swarm 来管理对等节点和事件。
     let mut swarm = {
-        // Create a Kademlia behaviour.
+        // 创建一个 Kademlia 行为。
         let mut cfg = KademliaConfig::default();
         cfg.set_query_timeout(Duration::from_secs(5 * 60));
         let store = MemoryStore::new(local_peer_id);
         let mut behaviour = Kademlia::with_config(local_peer_id, store, cfg);
 
-        // Add the bootnodes to the local routing table. `libp2p-dns` built
-        // into the `transport` resolves the `dnsaddr` when Kademlia tries
-        // to dial these nodes.
+        // 将引导节点添加到本地路由表中。嵌入在 `transport` 中的 `libp2p-dns`
+        // 将在 Kademlia 尝试拨号这些节点时解析 `dnsaddr`。
         for peer in &BOOTNODES {
             behaviour.add_address(&peer.parse()?, "/dnsaddr/bootstrap.libp2p.io".parse()?);
         }
@@ -66,14 +59,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         SwarmBuilder::with_async_std_executor(transport, behaviour, local_peer_id).build()
     };
 
-    // Order Kademlia to search for a peer.
+    // 命令 Kademlia 搜索对等节点。
     let to_search = env::args()
         .nth(1)
         .map(|p| p.parse())
         .transpose()?
         .unwrap_or_else(PeerId::random);
 
-    println!("Searching for the closest peers to {to_search}");
+    println!("正在搜索与 {to_search} 最近的对等节点");
     swarm.behaviour_mut().get_closest_peers(to_search);
 
     loop {
@@ -86,20 +79,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
             match result {
                 Ok(ok) => {
                     if !ok.peers.is_empty() {
-                        println!("Query finished with closest peers: {:#?}", ok.peers)
+                        println!("查询完成，最近的对等节点: {:#?}", ok.peers)
                     } else {
-                        // The example is considered failed as there
-                        // should always be at least 1 reachable peer.
-                        println!("Query finished with no closest peers.")
+                        // 如果至少有一个可达的对等节点，示例被视为失败。
+                        println!("查询完成，没有最近的对等节点。")
                     }
                 }
                 Err(GetClosestPeersError::Timeout { peers, .. }) => {
                     if !peers.is_empty() {
-                        println!("Query timed out with closest peers: {peers:#?}")
+                        println!("查询超时，最近的对等节点: {peers:#?}")
                     } else {
-                        // The example is considered failed as there
-                        // should always be at least 1 reachable peer.
-                        println!("Query timed out with no closest peers.");
+                        // 如果至少有一个可达的对等节点，示例被视为失败。
+                        println!("查询超时，没有最近的对等节点。");
                     }
                 }
             };

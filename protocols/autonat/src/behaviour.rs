@@ -80,10 +80,10 @@ pub struct Config {
     pub throttle_clients_peer_max: usize,
     /// Period for throttling clients requests.
     pub throttle_clients_period: Duration,
-    /// As a server reject probes for clients that are observed at a non-global ip address.
-    /// Correspondingly as a client only pick peers as server that are not observed at a
-    /// private ip address. Note that this does not apply for servers that are added via
-    /// [`Behaviour::add_server`].
+// 作为服务器，拒绝探测在非全局 IP 地址上观察到的客户端。
+//     相应地，作为客户端，仅选择在
+//     专用 IP 地址。请注意，这不适用于通过
+//     [“行为：：add_server”]。
     pub only_global_ips: bool,
 }
 
