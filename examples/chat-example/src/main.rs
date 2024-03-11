@@ -35,6 +35,8 @@ struct MyBehaviour {
     gossipsub: gossipsub::Behaviour,
     mdns: mdns::async_io::Behaviour,
 }
+
+//生成一个随机的key
 pub fn generate_random_key(length: usize) -> String {
     let mut rng = rand::thread_rng();
     let characters: Vec<char> = "abcdefghijklmnopqrstuvwxyz0123456789".chars().collect();
@@ -81,17 +83,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         })
         .boxed();
 
-    // // 为内容寻址的消息，我们可以对消息的哈希值进行散列，然后使用它作为 ID。
-    // let message_id_fn = |message: &gossipsub::Message| {
-    //     let mut s = DefaultHasher::new();
-    //     message.data.hash(&mut s);
-    //     gossipsub::MessageId::from(s.finish().to_string())
-    // };
     // 为内容寻址的消息，我们可以对消息的哈希值进行散列，然后使用它作为 ID。
     let message_id_fn = |message: &gossipsub::Message| {
         let mut s = DefaultHasher::new();
         message.data.hash(&mut s);
-        gossipsub::MessageId::from(generate_random_key(16))
+        // 生成一个随机的key
+        // gossipsub::MessageId::from(generate_random_key(16))
+        gossipsub::MessageId::from(s.finish().to_string())
     };
 
     // 设置自定义的 gossipsub 配置
